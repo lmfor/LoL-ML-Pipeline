@@ -50,16 +50,37 @@ def prepare_data(self):
             champs = np.concatenate([blue['champion'].iloc[:5].values, red['champion'].iloc[:5].values])
             # Players (10)
             players = np.concatenate([blue['playername'].iloc[:5].values, red['playername'].iloc[:5].values])
-            # Teams (2) - We just take the teamname from the first player of each side
+            # Teams (2) 
             teams = np.array([blue['teamname'].iloc[0], red['teamname'].iloc[0]])
+            # Bans (10)
+            bans = np.concatenate([
+                blue[['ban1', 'ban2', 'ban3', 'ban4', 'ban5']].iloc[0].values,
+                red[['ban1', 'ban2', 'ban3', 'ban4', 'ban5']].iloc[0].values
+            ])
             # League (1)
             league = np.array([group['league'].iloc[0]])
 
             # Concatenate everything 
-            full_row = np.concatenate([champs, players, teams, league])
+            full_row = np.concatenate([champs, players, teams, bans, league])
             
             game_features.append(full_row)
             game_labels.append(int(blue['result'].iloc[0]))
+
+    """
+    Format: X[game_number_by_int][features]
+
+    Feature Locations in X:
+
+    blue_team_champ_picks = X[game][0:5]
+    red_team_champ_picks = X[game][5:10]
+    blue_team_players = X[game][10:15]
+    red_team_players = X[game][15:20]
+    blue_team_name = X[game][20]
+    red_team_name = X[game][21]
+    blue_team_bans = X[game][22:27]
+    red_team_bans = X[game][27:32]
+    league = X[game][32]
+    """
 
     self.X = np.array(game_features)
     self.y = np.array(game_labels)
