@@ -27,14 +27,13 @@ class Trainer:
         n = int(self.raw_data.shape[0])
         
         # Split into train, eval, and test
-        train = self.raw_data.iloc[: int(0.8 * n)]
-        eval_ = self.raw_data.iloc[int(0.8 * n): int(0.9 * n)]
-        test = self.raw_data.iloc[int(0.9 * n):]
+        _train = self.raw_data.iloc[: int(0.8 * n)]
+        _eval_ = self.raw_data.iloc[int(0.8 * n): int(0.9 * n)]
+        _test = self.raw_data.iloc[int(0.9 * n):]
 
-        self.train_data = train
-        self.eval_data = eval_
-        self.test_data = test
-
+        self.train_data = _train
+        self.eval_data = _eval_
+        self.test_data = _test
     def train_epoch(self):
         pass
 
