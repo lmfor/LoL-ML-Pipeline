@@ -1,0 +1,13 @@
+[project]
+name = "lol-ml-pipeline"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "jupyterlab>=4.5.3",
+    "numpy>=2.4.2",
+    "pandas>=3.0.0",
+    "pytest>=9.0.2",
+    "tensorflow>=2.20.0",
+]

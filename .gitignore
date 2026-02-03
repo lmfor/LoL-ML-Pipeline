@@ -1,0 +1,21 @@
+# Python-generated files
+__pycache__/
+*.py[oc]
+build/
+dist/
+wheels/
+*.egg-info
+
+# Virtual environments
+.venv
+
+# large local data files
+data_ingest/sources/*.csv
+data_ingest/sources/*.parquet
+data_ingest/sources/
+data_ingest/sources
+notebooks/
+
+# notebooks
+*.ipynb
+.ipynb_checkpoints/
