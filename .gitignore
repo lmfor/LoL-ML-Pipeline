@@ -15,6 +15,3 @@ data_ingest/sources/*.parquet
 data_ingest/sources/
 data_ingest/sources
 
-# notebooks
-*.ipynb
-.ipynb_checkpoints/
