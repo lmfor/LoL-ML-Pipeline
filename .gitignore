@@ -17,4 +17,5 @@ data_ingest/sources
 
 # jupyter notebook data
 notebooks/*.csv
+notebooks/.ipynb_checkpoints/*
 
