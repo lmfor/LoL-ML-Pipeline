@@ -15,3 +15,6 @@ data_ingest/sources/*.parquet
 data_ingest/sources/
 data_ingest/sources
 
+# jupyter notebook data
+notebooks/*.csv
+
