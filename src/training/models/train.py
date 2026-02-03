@@ -86,8 +86,56 @@ def prepare_data(self):
     self.y = np.array(game_labels)
     return self.X, self.y
 
-    def build_model(self):
-        pass
+def build_model(self):
+    # 33 strings
+    # Format: [Champs(10), Players(10), Teams(2), Bans(10), League(1)]
+    inputs = tf.keras.layers.Input(shape=(33,), dtype=tf.string)
+
+    # slice input vector based on schema above in prepare_data
+    champs_input = inputs[:, 0:10]    # 5 Blue + 5 Red picks
+    players_input = inputs[:, 10:20]  # 5 Blue + 5 Red players
+    teams_input = inputs[:, 20:22]    # Blue + Red team names
+    bans_input = inputs[:, 22:32]     # 5 Blue + 5 Red bans
+    league_input = inputs[:, 32:33]   # The league string
+
+    # CHAMPIONS (Picks & Bans share the same vocabulary)
+    lookup_champs = tf.keras.layers.StringLookup(vocabulary=self.vocab_champs)(champs_input)
+    lookup_bans = tf.keras.layers.StringLookup(vocabulary=self.vocab_champs)(bans_input)
+    
+    champ_embed_layer = tf.keras.layers.Embedding(len(self.vocab_champs) + 1, 16)
+    embed_picks = champ_embed_layer(lookup_champs)
+    embed_bans = champ_embed_layer(lookup_bans)
+
+    # PLAYERS
+    lookup_players = tf.keras.layers.StringLookup(vocabulary=self.vocab_players)(players_input)
+    embed_players = tf.keras.layers.Embedding(len(self.vocab_players) + 1, 12)(lookup_players)
+
+    # TEAMS
+    lookup_teams = tf.keras.layers.StringLookup(vocabulary=self.vocab_teams)(teams_input)
+    embed_teams = tf.keras.layers.Embedding(len(self.vocab_teams) + 1, 8)(lookup_teams)
+
+    # LEAGUE
+    lookup_league = tf.keras.layers.StringLookup(vocabulary=self.vocab_leagues)(league_input)
+    embed_league = tf.keras.layers.Embedding(len(self.vocab_leagues) + 1, 4)(lookup_league)
+
+    # dense layers
+    merged = tf.keras.layers.Concatenate()([
+        tf.keras.layers.Flatten()(embed_picks),
+        tf.keras.layers.Flatten()(embed_bans),
+        tf.keras.layers.Flatten()(embed_players),
+        tf.keras.layers.Flatten()(embed_teams),
+        tf.keras.layers.Flatten()(embed_league)
+    ])
+
+    x = tf.keras.layers.Dense(128, activation='relu')(merged)
+    x = tf.keras.layers.Dropout(0.3)(x)
+    x = tf.keras.layers.Dense(64, activation='relu')(x)
+    output = tf.keras.layers.Dense(1, activation='sigmoid')(x)
+
+    # conglom.
+    self.model = tf.keras.Model(inputs=inputs, outputs=output)
+    self.model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy'])
+    return self.model
     
     def train(self):
         pass
