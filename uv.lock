@@ -954,7 +954,7 @@ wheels = [
 [[package]]
 name = "lol-ml-pipeline"
 version = "0.1.0"
-source = { virtual = "." }
+source = { editable = "." }
 dependencies = [
     { name = "jupyterlab" },
     { name = "numpy" },
@@ -966,8 +966,8 @@ dependencies = [
 [package.metadata]
 requires-dist = [
     { name = "jupyterlab", specifier = ">=4.5.3" },
-    { name = "numpy", specifier = ">=2.4.2" },
-    { name = "pandas", specifier = ">=3.0.0" },
+    { name = "numpy", specifier = ">=1.24.0" },
+    { name = "pandas", specifier = ">=2.0.0" },
     { name = "pytest", specifier = ">=9.0.2" },
     { name = "tensorflow", specifier = ">=2.20.0" },
 ]
