@@ -23,19 +23,33 @@ class Trainer:
         self.eval_data = None
         self.test_data = None
 
-    def _split_training_data(self):
-        n = int(self.raw_data.shape[0])
-        
-        # Split into train, eval, and test
-        _train = self.raw_data.iloc[: int(0.8 * n)]
-        _eval_ = self.raw_data.iloc[int(0.8 * n): int(0.9 * n)]
-        _test = self.raw_data.iloc[int(0.9 * n):]
+def prepare_data(self):
+        self.vocab = sorted(list(set(
+            [c for c in self.raw_data['champion'] if isinstance(c, str)]
+        )))
 
-        self.train_data = _train
-        self.eval_data = _eval_
-        self.test_data = _test
-    def train_epoch(self):
+        game_features = []
+        game_labels = []
+
+        # 2. Group into (N, 10) array of champion name strings
+        for game_id, group in self.raw_data.groupby('gameid'):
+            blue = group[group['side'].str.lower() == 'blue']
+            red = group[group['side'].str.lower() == 'red']
+            
+            if len(blue) >= 5 and len(red) >= 5:
+                # Store as raw strings
+                b_champs = blue['champion'].iloc[:5].values
+                r_champs = red['champion'].iloc[:5].values
+                
+                game_features.append(np.concatenate([b_champs, r_champs]))
+                game_labels.append(int(blue['result'].iloc[0]))
+
+        self.X = np.array(game_features) 
+        self.y = np.array(game_labels)
+        return self.vocab
+
+    def build_model(self):
         pass
-
-    def train_step(self):
+    
+    def train(self):
         pass
