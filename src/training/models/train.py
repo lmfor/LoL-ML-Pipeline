@@ -137,5 +137,22 @@ def build_model(self):
     self.model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy'])
     return self.model
     
-    def train(self):
-        pass
+    def fit(self, epochs=20, batch_size=32, validation_split=0.2):
+        if self.model is None:
+            raise ValueError("Model has not been built. Call build_model() before fit().")
+        
+        if self.X is None or self.y is None:
+            raise ValueError("Data has not been prepared. Call prepare_data() before fit().")
+        
+        print(f"Starting training for {epochs} epochs on {len(self.X)} games worth of data...")
+
+        self.history = self.model.fit(
+            self.X,
+            self.y,
+            epochs=epochs,
+            batch_size=batch_size,
+            validation_split=validation_split,
+            verbose=1 # ? progress bar 
+        )
+
+        return self.history
