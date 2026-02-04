@@ -11,6 +11,8 @@ root = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "..")
 sources_path = os.path.join(root, "data_ingest", "sources")
 
 match_files = [
+    os.path.join(sources_path, "2023_match_data.csv"),
+    os.path.join(sources_path, "2024_match_data.csv"),
     os.path.join(sources_path, "2025_match_data.csv"),
     os.path.join(sources_path, "2026_match_data.csv")
 ]
@@ -179,7 +181,7 @@ class Trainer:
                 validation_data=val_ds,
                 epochs=epochs,
                 verbose=1,
-                callbacks=[early_stop]
+                # callbacks=[early_stop]
             )
 
             return self.history
