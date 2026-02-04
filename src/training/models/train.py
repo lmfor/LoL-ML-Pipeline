@@ -83,7 +83,7 @@ class Trainer:
         league = X[game][32]
         """
 
-        self.X = np.array(game_features)
+        self.X = np.array(game_features).astype(str)
         self.y = np.array(game_labels)
         return self.X, self.y
 
@@ -139,24 +139,35 @@ class Trainer:
         return self.model
     
     def fit(self, epochs=20, batch_size=32, validation_split=0.2):
-        if self.model is None:
-            raise ValueError("Model has not been built. Call build_model() before fit().")
-        
-        if self.X is None or self.y is None:
-            raise ValueError("Data has not been prepared. Call prepare_data() before fit().")
-        
-        print(f"Starting training for {epochs} epochs on {len(self.X)} games worth of data...")
+            if self.model is None or self.X is None:
+                raise ValueError("Model or Data not ready.")
+            split_idx = int(len(self.X) * (1 - validation_split))
+            
+            # split data
+            train_X, val_X = self.X[:split_idx], self.X[split_idx:]
+            train_y, val_y = self.y[:split_idx], self.y[split_idx:]
 
-        self.history = self.model.fit(
-            self.X,
-            self.y,
-            epochs=epochs,
-            batch_size=batch_size,
-            validation_split=validation_split,
-            verbose=1 # ? progress bar 
-        )
+            # explicit tell tf they are STRINGS
+            train_ds = tf.data.Dataset.from_tensor_slices((
+                tf.cast(train_X, tf.string), 
+                train_y
+            )).batch(batch_size)
 
-        return self.history
+            val_ds = tf.data.Dataset.from_tensor_slices((
+                tf.cast(val_X, tf.string), 
+                val_y
+            )).batch(batch_size)
+
+            print(f"Starting training for {epochs} epochs...")
+
+            self.history = self.model.fit(
+                train_ds,
+                validation_data=val_ds,
+                epochs=epochs,
+                verbose=1
+            )
+
+            return self.history
 
 if __name__ == "__main__":
     # cvs
@@ -168,7 +179,7 @@ if __name__ == "__main__":
     trainer.prepare_data()  
     trainer.build_model()   
     
-    history = trainer.fit(epochs=15, batch_size=16)
+    history = trainer.fit()
 
     # final accuracy
     final_acc = history.history['val_accuracy'][-1]
