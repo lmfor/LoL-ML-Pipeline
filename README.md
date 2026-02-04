@@ -25,7 +25,7 @@ This repository prioritizes **system design and workflow correctness** over shor
 
 The end-to-end pipeline follows the workflow below, spanning local development and cloud execution:
 
-![LoL ML Pipeline Workflow](assets/workflow_leaguemodel.png)
+![LoL ML Pipeline Workflow](assets/workflow.png)
 
 At a high level, the system:
 - ingests and versions raw competitive match data  
