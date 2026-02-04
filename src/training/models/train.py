@@ -2,6 +2,7 @@ import os
 import pandas as pd
 import numpy as np
 import tensorflow as tf 
+from tensorflow.keras import regularizers
 
 from data_ingest.loaders.load_data import DataLoader
 
@@ -23,7 +24,7 @@ class Trainer:
         self.y = None
         
         self.vocab_champs = []
-        self.vocab_players = []
+        # self.vocab_players = [] # RE-ADD LATER IF NEEDED
         self.vocab_teams = []
         self.vocab_leagues = []
         
@@ -35,7 +36,7 @@ class Trainer:
 
     def prepare_data(self):
         self.vocab_champs = sorted(list(set(self.raw_data['champion'].dropna().astype(str))))
-        self.vocab_players = sorted(list(set(self.raw_data['playername'].dropna().astype(str))))
+        # self.vocab_players = sorted(list(set(self.raw_data['playername'].dropna().astype(str)))) # RE-ADD LATER
         self.vocab_teams = sorted(list(set(self.raw_data['teamname'].dropna().astype(str))))
         self.vocab_leagues = sorted(list(set(self.raw_data['league'].dropna().astype(str))))
 
@@ -50,7 +51,7 @@ class Trainer:
                 # Champions (10)
                 champs = np.concatenate([blue['champion'].iloc[:5].values, red['champion'].iloc[:5].values])
                 # Players (10)
-                players = np.concatenate([blue['playername'].iloc[:5].values, red['playername'].iloc[:5].values])
+                # players = np.concatenate([blue['playername'].iloc[:5].values, red['playername'].iloc[:5].values]) # REMOVED TO PREVENT OVERFITTING
                 # Teams (2) 
                 teams = np.array([blue['teamname'].iloc[0], red['teamname'].iloc[0]])
                 # Bans (10)
@@ -61,8 +62,8 @@ class Trainer:
                 # League (1)
                 league = np.array([group['league'].iloc[0]])
 
-                # Concatenate everything 
-                full_row = np.concatenate([champs, players, teams, bans, league])
+                # Concatenate everything - NOW 23 STRINGS
+                full_row = np.concatenate([champs, teams, bans, league])
                 
                 game_features.append(full_row)
                 game_labels.append(int(blue['result'].iloc[0]))
@@ -74,30 +75,35 @@ class Trainer:
 
         blue_team_champ_picks = X[game][0:5]
         red_team_champ_picks = X[game][5:10]
-        blue_team_players = X[game][10:15]
-        red_team_players = X[game][15:20]
-        blue_team_name = X[game][20]
-        red_team_name = X[game][21]
-        blue_team_bans = X[game][22:27]
-        red_team_bans = X[game][27:32]
-        league = X[game][32]
+        # blue_team_players = X[game][10:15] # REMOVED
+        # red_team_players = X[game][15:20]  # REMOVED
+        blue_team_name = X[game][10]         # SHIFTED
+        red_team_name = X[game][11]          # SHIFTED
+        blue_team_bans = X[game][12:17]      # SHIFTED
+        red_team_bans = X[game][17:22]       # SHIFTED
+        league = X[game][22]                 # SHIFTED
         """
 
-        self.X = np.array(game_features).astype(str)
-        self.y = np.array(game_labels)
+        # random order of indices
+        indices = np.random.permutation(len(game_features))
+
+        # Reorder X and y using indices
+        self.X = np.array(game_features)[indices].astype(str)
+        self.y = np.array(game_labels)[indices]
+
         return self.X, self.y
 
     def build_model(self):
-        # 33 strings
-        # Format: [Champs(10), Players(10), Teams(2), Bans(10), League(1)]
-        inputs = tf.keras.layers.Input(shape=(33,), dtype=tf.string)
+        # 23 strings
+        # Format: [Champs(10), Teams(2), Bans(10), League(1)]
+        inputs = tf.keras.layers.Input(shape=(23,), dtype=tf.string)
 
         # slice input vector based on schema above in prepare_data
         champs_input = inputs[:, 0:10]    # 5 Blue + 5 Red picks
-        players_input = inputs[:, 10:20]  # 5 Blue + 5 Red players
-        teams_input = inputs[:, 20:22]    # Blue + Red team names
-        bans_input = inputs[:, 22:32]     # 5 Blue + 5 Red bans
-        league_input = inputs[:, 32:33]   # The league string
+        # players_input = inputs[:, 10:20] # REMOVED
+        teams_input = inputs[:, 10:12]    # Blue + Red team names
+        bans_input = inputs[:, 12:22]     # 5 Blue + 5 Red bans
+        league_input = inputs[:, 22:23]   # The league string
 
         # CHAMPIONS (Picks & Bans share the same vocabulary)
         lookup_champs = tf.keras.layers.StringLookup(vocabulary=self.vocab_champs)(champs_input)
@@ -107,9 +113,9 @@ class Trainer:
         embed_picks = champ_embed_layer(lookup_champs)
         embed_bans = champ_embed_layer(lookup_bans)
 
-        # PLAYERS
-        lookup_players = tf.keras.layers.StringLookup(vocabulary=self.vocab_players)(players_input)
-        embed_players = tf.keras.layers.Embedding(len(self.vocab_players) + 1, 12)(lookup_players)
+        # PLAYERS - REMOVED TO PREVENT OVERFITTING
+        # lookup_players = tf.keras.layers.StringLookup(vocabulary=self.vocab_players)(players_input)
+        # embed_players = tf.keras.layers.Embedding(len(self.vocab_players) + 1, 12)(lookup_players)
 
         # TEAMS
         lookup_teams = tf.keras.layers.StringLookup(vocabulary=self.vocab_teams)(teams_input)
@@ -123,19 +129,21 @@ class Trainer:
         merged = tf.keras.layers.Concatenate()([
             tf.keras.layers.Flatten()(embed_picks),
             tf.keras.layers.Flatten()(embed_bans),
-            tf.keras.layers.Flatten()(embed_players),
+            # tf.keras.layers.Flatten()(embed_players), # REMOVED
             tf.keras.layers.Flatten()(embed_teams),
             tf.keras.layers.Flatten()(embed_league)
         ])
 
-        x = tf.keras.layers.Dense(128, activation='relu')(merged)
-        x = tf.keras.layers.Dropout(0.3)(x)
+        x = tf.keras.layers.Dense(128, activation='relu', kernel_regularizer=tf.keras.regularizers.l2(0.01))(merged)
+        x = tf.keras.layers.Dropout(0.5)(x)
         x = tf.keras.layers.Dense(64, activation='relu')(x)
+        x = tf.keras.layers.Dropout(0.3)(x)
         output = tf.keras.layers.Dense(1, activation='sigmoid')(x)
 
         # conglom.
         self.model = tf.keras.Model(inputs=inputs, outputs=output)
-        self.model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy'])
+        optimizer = tf.keras.optimizers.Adam(learning_rate=0.0001) # REDUCED LEARNING RATE
+        self.model.compile(optimizer=optimizer, loss='binary_crossentropy', metrics=['accuracy'])
         return self.model
     
     def fit(self, epochs=20, batch_size=32, validation_split=0.2):
@@ -146,6 +154,12 @@ class Trainer:
             # split data
             train_X, val_X = self.X[:split_idx], self.X[split_idx:]
             train_y, val_y = self.y[:split_idx], self.y[split_idx:]
+
+            early_stop = tf.keras.callbacks.EarlyStopping(
+                monitor='val_loss', 
+                patience=5, 
+                restore_best_weights=True
+            )
 
             # explicit tell tf they are STRINGS
             train_ds = tf.data.Dataset.from_tensor_slices((
@@ -164,7 +178,8 @@ class Trainer:
                 train_ds,
                 validation_data=val_ds,
                 epochs=epochs,
-                verbose=1
+                verbose=1,
+                callbacks=[early_stop]
             )
 
             return self.history
@@ -179,7 +194,7 @@ if __name__ == "__main__":
     trainer.prepare_data()  
     trainer.build_model()   
     
-    history = trainer.fit()
+    history = trainer.fit(epochs=100, batch_size=16, validation_split=0.2) # MORE EPOCHS, SMALLER BATCH
 
     # final accuracy
     final_acc = history.history['val_accuracy'][-1]
