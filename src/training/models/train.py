@@ -181,7 +181,7 @@ class Trainer:
                 validation_data=val_ds,
                 epochs=epochs,
                 verbose=1,
-                # callbacks=[early_stop]
+                callbacks=[early_stop]
             )
 
             return self.history
