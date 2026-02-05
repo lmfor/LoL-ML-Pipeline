@@ -4,6 +4,9 @@ import numpy as np
 import tensorflow as tf 
 from tensorflow.keras import regularizers
 
+# Cloud Dev
+import boto3
+
 from data_ingest.loaders.load_data import DataLoader
 
 
@@ -35,6 +38,15 @@ class Trainer:
 
         # 5. Tracking metrics
         self.history = None
+    
+    def download_data_from_s3(self, bucket_name, files):
+        s3 = boto3.client('s3')
+        for file_name in files:
+            local_path = f"/app/data/{file_name}"
+            if not os.path.exists(local_path):
+                s3.download_file(bucket_name, f"raw_data/{file_name}", local_path)
+                print(f"Downloaded {file_name} from S3 bucket {bucket_name} to {local_path}")
+
 
     def prepare_data(self):
         self.vocab_champs = sorted(list(set(self.raw_data['champion'].dropna().astype(str))))
@@ -185,6 +197,12 @@ class Trainer:
             )
 
             return self.history
+    
+    def upload_model_to_s3(self, model_path):
+        bucket_name = os.getenv('S3_BUCKET_NAME')
+        s3 = boto3.client('s3')
+        s3.upload_file(model_path, bucket_name, f"models/lol_model_{pd.Timestamp.now().strftime('%Y%m%d_%H%M%S')}.h5")
+        print(f"Uploaded model to S3 bucket {bucket_name}.")
 
 if __name__ == "__main__":
     # cvs
