@@ -201,21 +201,55 @@ class Trainer:
     def upload_model_to_s3(self, model_path):
         bucket_name = os.getenv('S3_BUCKET_NAME')
         s3 = boto3.client('s3')
-        s3.upload_file(model_path, bucket_name, f"models/lol_model_{pd.Timestamp.now().strftime('%Y%m%d_%H%M%S')}.h5")
+        s3.upload_file(model_path, bucket_name, f"models/lol_model_{pd.Timestamp.now().strftime('%Y%m%d_%H%M%S')}.keras")
         print(f"Uploaded model to S3 bucket {bucket_name}.")
 
 if __name__ == "__main__":
-    # cvs
-    loader = DataLoader()
-    raw_df = loader.load_data(paths=match_files)
+    from dotenv import load_dotenv
+    load_dotenv() 
+    
+    bucket = os.getenv("S3_BUCKET_NAME")
+    data_folder = os.getenv("DATA_DIR", sources_path)
+    
 
-    # trainer init and run
+    files_needed = [
+        "2023_match_data.csv", "2024_match_data.csv",
+        "2025_match_data.csv", "2026_match_data.csv"
+    ]
+    
+    # Ingest Data (Download from S3 if missing)
+    loader = DataLoader()
+    
+    # Check if files exist locally; if not, download them
+    os.makedirs(data_folder, exist_ok=True)
+    s3_client = boto3.client('s3')
+    
+    downloaded_paths = []
+    for f in files_needed:
+        local_p = os.path.join(data_folder, f)
+        if not os.path.exists(local_p):
+            print(f"File {f} not found locally. Downloading from S3...")
+            s3_client.download_file(bucket, f, local_p)
+        downloaded_paths.append(local_p)
+
+    # Load into Pandas
+    raw_df = loader.load_data(paths=downloaded_paths)
+
+    # Standard Training Pipeline
     trainer = Trainer(raw_df)
     trainer.prepare_data()  
     trainer.build_model()   
     
-    history = trainer.fit(epochs=100, batch_size=16, validation_split=0.2) # MORE EPOCHS, SMALLER BATCH
+    history = trainer.fit(epochs=100, batch_size=16, validation_split=0.2)
+    
+    # save and Upload Model Artifact
+    model_local_path = "models/latest_lol_model.keras"
+    os.makedirs("models", exist_ok=True)
+    trainer.model.save(model_local_path)
+    
+    print("Uploading model artifact to S3...")
+    s3_client.upload_file(model_local_path, bucket, "model_artifacts/latest_lol_model.keras")
 
-    # final accuracy
     final_acc = history.history['val_accuracy'][-1]
     print(f"Final Validation Accuracy: {final_acc:.2%}")
+    print("Cloud Training Task Complete.")
