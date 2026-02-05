@@ -21,3 +21,6 @@ notebooks/.ipynb_checkpoints/*
 
 # .env
 .env
+
+# aws
+aws/*.pkg
