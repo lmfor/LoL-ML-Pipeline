@@ -19,3 +19,5 @@ data_ingest/sources
 notebooks/*.csv
 notebooks/.ipynb_checkpoints/*
 
+# .env
+.env
